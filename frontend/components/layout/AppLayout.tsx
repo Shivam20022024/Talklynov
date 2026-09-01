@@ -106,7 +106,7 @@ function Sidebar({ open, onClose, user }: { open: boolean; onClose: () => void; 
               {group.items.map(([label, Icon, href]) => {
                 const isActive = pathname?.startsWith(href as string);
                 return (
-                  <Link key={label as string} href={href as string} onClick={() => onClose()} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[14px] font-medium tracking-wide transition-colors ${isActive ? 'bg-accent text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
+                  <Link key={label as string} href={href as string} onClick={() => onClose()} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[14px] font-semibold tracking-wide transition-colors ${isActive ? 'bg-accent text-primary' : 'text-foreground/70 hover:bg-muted hover:text-foreground'}`}>
                     <Icon size={18} strokeWidth={2.5} />
                     <span>{label as string}</span>
                   </Link>
@@ -174,4 +174,5 @@ export default function AppLayout({ children, title = "Dashboard" }: { children:
     </div>
   );
 }
+
 
