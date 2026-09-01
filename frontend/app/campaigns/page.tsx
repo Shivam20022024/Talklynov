@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState, useRef } from 'react'
 import { Check, Download, Plus, Search, Zap, Loader2, X, Upload } from 'lucide-react'
@@ -148,7 +148,7 @@ export default function CampaignsPage() {
         <div className="mt-5 overflow-x-auto">
           <table className="w-full min-w-[780px] text-left">
             <thead>
-              <tr className="border-b border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              <tr className="border-b border-border text-xs uppercase tracking-[0.14em] text-muted-foreground">
                 <th className="pb-3 pl-2 font-semibold">Campaign / property</th>
                 <th className="pb-3 font-semibold">Leads</th>
                 <th className="pb-3 font-semibold">Calls</th>
@@ -173,18 +173,18 @@ export default function CampaignsPage() {
                           {selected.includes(campaign.campaign_id) && <Check size={11} />}
                         </button>
                         <div>
-                          <p className="text-xs font-semibold">{campaign.name}</p>
-                          <p className="mt-0.5 text-[11px] text-muted-foreground">{campaign.property}</p>
+                          <p className="text-sm font-semibold">{campaign.name}</p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">{campaign.property}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 text-xs">{campaign.leads}</td>
-                    <td className="py-4 text-xs">{campaign.calls}</td>
-                    <td className="py-4 text-xs">{campaign.connected}</td>
-                    <td className="py-4 text-xs">{campaign.interested}</td>
-                    <td className="py-4 text-xs font-semibold text-primary">{campaign.conversion}</td>
+                    <td className="py-4 text-sm">{campaign.leads}</td>
+                    <td className="py-4 text-sm">{campaign.calls}</td>
+                    <td className="py-4 text-sm">{campaign.connected}</td>
+                    <td className="py-4 text-sm">{campaign.interested}</td>
+                    <td className="py-4 text-sm font-semibold text-primary">{campaign.conversion}</td>
                     <td className="py-4">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{campaign.status}
                       </span>
                     </td>
@@ -250,3 +250,4 @@ export default function CampaignsPage() {
     </AppLayout>
   )
 }
+
