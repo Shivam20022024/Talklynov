@@ -1,12 +1,12 @@
-'use client'
+﻿'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, Suspense } from 'react'
 import { Download, MoreHorizontal, Phone, Search, Upload, Loader2, Plus, X, User, MapPin, Home, Sparkles, MessageSquare, Clock, ArrowRight, Trash2 } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
 import { fetchApi, getAuthToken, API_BASE_URL } from '@/lib/api'
 import { useSearchParams, useRouter } from 'next/navigation'
 
-export default function LeadsPage() {
+function LeadsContent() {
   const [leads, setLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
@@ -545,5 +545,13 @@ export default function LeadsPage() {
         </div>
       )}
     </AppLayout>
+  )
+}
+
+export default function LeadsPage() {
+  return (
+    <Suspense fallback={<div className="p-8">Loading...</div>}>
+      <LeadsContent />
+    </Suspense>
   )
 }
