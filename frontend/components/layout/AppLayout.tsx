@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -89,7 +89,7 @@ function Sidebar({ open, onClose, user }: { open: boolean; onClose: () => void; 
   const pathname = usePathname();
   
   return <>
-    <aside className={`${open ? 'flex' : 'hidden'} fixed inset-y-0 left-0 z-40 w-[248px] flex-col border-r border-border bg-card lg:static lg:flex`}>
+    <aside className={`${open ? 'flex' : 'hidden'} fixed inset-y-0 left-0 z-40 w-60 flex-col border-r border-border bg-card lg:static lg:flex`}>
       <div className="flex h-[76px] items-center justify-between border-b border-border px-6">
         <div className="flex items-center gap-3">
           <div className="brand-mark"><Bot size={20} /></div>
@@ -106,7 +106,7 @@ function Sidebar({ open, onClose, user }: { open: boolean; onClose: () => void; 
               {group.items.map(([label, Icon, href]) => {
                 const isActive = pathname?.startsWith(href as string);
                 return (
-                  <Link key={label as string} href={href as string} onClick={() => onClose()} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[14px] font-extrabold tracking-wide transition-colors ${isActive ? 'bg-accent text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
+                  <Link key={label as string} href={href as string} onClick={() => onClose()} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[14px] font-medium tracking-wide transition-colors ${isActive ? 'bg-accent text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
                     <Icon size={18} strokeWidth={2.5} />
                     <span>{label as string}</span>
                   </Link>
@@ -174,3 +174,4 @@ export default function AppLayout({ children, title = "Dashboard" }: { children:
     </div>
   );
 }
+
