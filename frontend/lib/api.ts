@@ -1,0 +1,58 @@
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002';
+
+export function getAuthToken(): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('access_token');
+  }
+  return null;
+}
+
+export function setAuthToken(token: string) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('access_token', token);
+  }
+}
+
+export function removeAuthToken() {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('access_token');
+  }
+}
+
+interface FetchOptions extends RequestInit {
+  requireAuth?: boolean;
+}
+
+export async function fetchApi(endpoint: string, options: FetchOptions = {}) {
+  const { requireAuth = true, headers, ...customConfig } = options;
+  const token = getAuthToken();
+
+  const config: RequestInit = {
+    ...customConfig,
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+  };
+
+  if (requireAuth && token) {
+    (config.headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  
+  if ((response.status === 401 || response.status === 403) && requireAuth) {
+    removeAuthToken();
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+  }
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.detail || data.message || 'An error occurred');
+  }
+
+  return data;
+}

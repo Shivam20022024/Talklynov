@@ -1,0 +1,15 @@
+﻿__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+env/
+build/
+dist/
+.env
+.env.local
+.venv
+venv/
+node_modules/
+.next/
+backend/check_*.py
