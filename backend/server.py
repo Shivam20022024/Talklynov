@@ -1,4 +1,4 @@
-# server.py
+﻿# server.py
 import os
 import sys
 import warnings
@@ -931,4 +931,5 @@ if __name__ == "__main__":
     import uvicorn
     # Using 'server:app' as a string is required for multi-worker setup
     uvicorn.run("server:app", host="0.0.0.0", port=8002, workers=4)
+
 
