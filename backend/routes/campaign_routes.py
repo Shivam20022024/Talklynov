@@ -40,34 +40,65 @@ async def list_campaigns(current_user: dict = Depends(get_current_user)):
     db = mongodb.get_db()
     campaigns = await db.campaigns.find({"company_id": current_user["company_id"]}).sort("created_at", -1).to_list(length=100)
     
+    campaign_ids = [c.get("campaign_id") for c in campaigns if c.get("campaign_id")]
+    
+    # Bulk fetch leads counts
+    leads_counts = {}
+    if campaign_ids:
+        leads_cursor = db.leads.aggregate([
+            {"$match": {"campaign_id": {"$in": campaign_ids}}},
+            {"$group": {"_id": "$campaign_id", "count": {"$sum": 1}}}
+        ])
+        async for doc in leads_cursor:
+            leads_counts[doc["_id"]] = doc["count"]
+            
+    # Bulk fetch calls stats
+    calls_stats = {}
+    if campaign_ids:
+        calls_cursor = db.calls.aggregate([
+            {"$match": {"campaign_id": {"$in": campaign_ids}}},
+            {"$group": {
+                "_id": "$campaign_id",
+                "calls_made": {"$sum": 1},
+                "connected": {"$sum": {"$cond": [{"$in": ["$status", ["Completed", "completed"]]}, 1, 0]}},
+                "interested": {"$sum": {"$cond": [{"$in": ["$analysis.lead_temperature", ["Warm", "Hot"]]}, 1, 0]}}
+            }}
+        ])
+        async for doc in calls_cursor:
+            calls_stats[doc["_id"]] = doc
+    
+    # Bulk prepare update operations to sync campaign stats
+    from pymongo import UpdateOne
+    bulk_updates = []
+    
     for c in campaigns:
         c["_id"] = None
         campaign_id = c.get("campaign_id")
         
         if campaign_id:
-            # Dynamically calculate metrics
-            leads_count = await db.leads.count_documents({"campaign_id": campaign_id})
-            calls_made = await db.calls.count_documents({"campaign_id": campaign_id})
-            connected = await db.calls.count_documents({"campaign_id": campaign_id, "status": {"$in": ["Completed", "completed"]}})
-            interested = await db.calls.count_documents({
-                "campaign_id": campaign_id, 
-                "analysis.lead_temperature": {"$in": ["Warm", "Hot"]}
-            })
+            # Get stats from our bulk aggregation maps
+            leads_count = leads_counts.get(campaign_id, 0)
+            c_stats = calls_stats.get(campaign_id, {})
+            calls_made = c_stats.get("calls_made", 0)
+            connected = c_stats.get("connected", 0)
+            interested = c_stats.get("interested", 0)
             
             c["leads"] = leads_count
             c["calls"] = calls_made
             c["connected"] = connected
             c["interested"] = interested
             
-            # Update the static fields in the background to keep them somewhat in sync
-            await db.campaigns.update_one(
-                {"campaign_id": campaign_id},
-                {"$set": {
-                    "leads_count": leads_count,
-                    "calls_made": calls_made,
-                    "connected": connected,
-                    "interested": interested
-                }}
+            # Queue for bulk update
+            bulk_updates.append(
+                UpdateOne(
+                    {"campaign_id": campaign_id},
+                    {"$set": {
+                        "leads_count": leads_count,
+                        "calls_made": calls_made,
+                        "connected": connected,
+                        "interested": interested
+                    }}
+                )
             )
         else:
             c["leads"] = c.get("leads_count", 0)
@@ -80,6 +111,11 @@ async def list_campaigns(current_user: dict = Depends(get_current_user)):
             c["conversion"] = f"{round((c['interested'] / c['connected']) * 100, 1)}%"
         else:
             c["conversion"] = "0%"
+            
+    if bulk_updates:
+        # Execute the background sync in a single DB call
+        import asyncio
+        asyncio.create_task(db.campaigns.bulk_write(bulk_updates))
             
     return campaigns
 
