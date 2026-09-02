@@ -23,24 +23,26 @@ class IntelligenceService:
             
         start_date = (today - timedelta(days=days)).replace(hour=0, minute=0, second=0, microsecond=0)
         
-        # 1. Total Leads
-        total_leads = await db.leads.count_documents({"company_id": company_id, "created_at": {"$gte": start_date}})
-        
-        # 2. Calls Made
-        calls_made = await db.calls.count_documents({"company_id": company_id, "created_at": {"$gte": start_date}})
-        
-        # 3. Connected Calls
-        connected_calls = await db.calls.count_documents({
+        # 1-4. Concurrently fetch all top-level metrics
+        total_leads_task = db.leads.count_documents({"company_id": company_id, "created_at": {"$gte": start_date}})
+        calls_made_task = db.calls.count_documents({"company_id": company_id, "created_at": {"$gte": start_date}})
+        connected_calls_task = db.calls.count_documents({
             "company_id": company_id, 
             "status": {"$in": ["Completed", "completed", "Analyzed"]},
             "created_at": {"$gte": start_date}
         })
+        qualified_leads_task = db.leads.count_documents({"company_id": company_id, "status": "Qualified", "created_at": {"$gte": start_date}})
+        interested_leads_task = db.leads.count_documents({"company_id": company_id, "status": "Interested", "created_at": {"$gte": start_date}})
+        converted_leads_task = db.leads.count_documents({"company_id": company_id, "status": "Converted", "created_at": {"$gte": start_date}})
+        contacted_leads_task = db.leads.count_documents({"company_id": company_id, "status": {"$ne": "New"}, "created_at": {"$gte": start_date}})
         
-        # 4. Lead Statuses
-        qualified_leads = await db.leads.count_documents({"company_id": company_id, "status": "Qualified", "created_at": {"$gte": start_date}})
-        interested_leads = await db.leads.count_documents({"company_id": company_id, "status": "Interested", "created_at": {"$gte": start_date}})
-        converted_leads = await db.leads.count_documents({"company_id": company_id, "status": "Converted", "created_at": {"$gte": start_date}})
-        contacted_leads = await db.leads.count_documents({"company_id": company_id, "status": {"$ne": "New"}, "created_at": {"$gte": start_date}})
+        (
+            total_leads, calls_made, connected_calls, 
+            qualified_leads, interested_leads, converted_leads, contacted_leads
+        ) = await asyncio.gather(
+            total_leads_task, calls_made_task, connected_calls_task,
+            qualified_leads_task, interested_leads_task, converted_leads_task, contacted_leads_task
+        )
         
         # 5. Conversion Rate
         conversion_rate = "0%"
@@ -50,24 +52,37 @@ class IntelligenceService:
             
         # 6. Chart Data
         chart_data = []
+        chart_tasks = []
+        labels = []
+        
         if days == 0:
             points = 12
             step_hours = 2
             for i in range(points - 1, -1, -1):
                 d_start = (today - timedelta(hours=i*step_hours)).replace(minute=0, second=0, microsecond=0)
                 d_end = d_start + timedelta(hours=step_hours)
-                cm = await db.calls.count_documents({"company_id": company_id, "created_at": {"$gte": d_start, "$lt": d_end}})
-                cc = await db.calls.count_documents({"company_id": company_id, "status": {"$in": ["Completed", "completed", "Analyzed"]}, "created_at": {"$gte": d_start, "$lt": d_end}})
-                chart_data.append({"date": d_start.strftime("%I %p"), "calls_made": cm, "connected_calls": cc})
+                labels.append(d_start.strftime("%I %p"))
+                chart_tasks.append(db.calls.count_documents({"company_id": company_id, "created_at": {"$gte": d_start, "$lt": d_end}}))
+                chart_tasks.append(db.calls.count_documents({"company_id": company_id, "status": {"$in": ["Completed", "completed", "Analyzed"]}, "created_at": {"$gte": d_start, "$lt": d_end}}))
         else:
             points = min(12, days)
             step_days = max(1, days // points)
             for i in range(points - 1, -1, -1):
                 d_start = (today - timedelta(days=i*step_days)).replace(hour=0, minute=0, second=0, microsecond=0)
                 d_end = d_start + timedelta(days=step_days)
-                cm = await db.calls.count_documents({"company_id": company_id, "created_at": {"$gte": d_start, "$lt": d_end}})
-                cc = await db.calls.count_documents({"company_id": company_id, "status": {"$in": ["Completed", "completed", "Analyzed"]}, "created_at": {"$gte": d_start, "$lt": d_end}})
-                chart_data.append({"date": d_start.strftime("%b %d"), "calls_made": cm, "connected_calls": cc})
+                labels.append(d_start.strftime("%b %d"))
+                chart_tasks.append(db.calls.count_documents({"company_id": company_id, "created_at": {"$gte": d_start, "$lt": d_end}}))
+                chart_tasks.append(db.calls.count_documents({"company_id": company_id, "status": {"$in": ["Completed", "completed", "Analyzed"]}, "created_at": {"$gte": d_start, "$lt": d_end}}))
+                
+        if chart_tasks:
+            results = await asyncio.gather(*chart_tasks)
+            # results is a flat list: [cm1, cc1, cm2, cc2, ...]
+            for idx, label in enumerate(labels):
+                chart_data.append({
+                    "date": label,
+                    "calls_made": results[idx*2],
+                    "connected_calls": results[idx*2 + 1]
+                })
             
         return {
             "total_leads": total_leads,
@@ -84,18 +99,22 @@ class IntelligenceService:
         """
         Calculates lifetime (overall) metrics for the BI Dashboard.
         """
-        # 1. Total Calls
-        total_calls = await db.calls.count_documents({"company_id": company_id})
-        inbound_calls = await db.calls.count_documents({"company_id": company_id, "direction": "inbound"})
-        outbound_calls = await db.calls.count_documents({"company_id": company_id, "direction": "outbound"})
+        # 1-3. Concurrently fetch all call and lead counts
+        total_calls_task = db.calls.count_documents({"company_id": company_id})
+        inbound_calls_task = db.calls.count_documents({"company_id": company_id, "direction": "inbound"})
+        outbound_calls_task = db.calls.count_documents({"company_id": company_id, "direction": "outbound"})
+        total_leads_task = db.calls.count_documents({"company_id": company_id, "analysis": {"$exists": True}})
+        hot_leads_task = db.calls.count_documents({"company_id": company_id, "analysis.lead_temperature": "Hot"})
+        warm_leads_task = db.calls.count_documents({"company_id": company_id, "analysis.lead_temperature": "Warm"})
+        cold_leads_task = db.calls.count_documents({"company_id": company_id, "analysis.lead_temperature": "Cold"})
         
-        # 2. Total Leads (calls with analysis)
-        total_leads = await db.calls.count_documents({"company_id": company_id, "analysis": {"$exists": True}})
-        
-        # 3. Lead Temperatures
-        hot_leads = await db.calls.count_documents({"company_id": company_id, "analysis.lead_temperature": "Hot"})
-        warm_leads = await db.calls.count_documents({"company_id": company_id, "analysis.lead_temperature": "Warm"})
-        cold_leads = await db.calls.count_documents({"company_id": company_id, "analysis.lead_temperature": "Cold"})
+        (
+            total_calls, inbound_calls, outbound_calls, total_leads, 
+            hot_leads, warm_leads, cold_leads
+        ) = await asyncio.gather(
+            total_calls_task, inbound_calls_task, outbound_calls_task, total_leads_task,
+            hot_leads_task, warm_leads_task, cold_leads_task
+        )
         
         # 4. Averages
         avg_pipeline = [
