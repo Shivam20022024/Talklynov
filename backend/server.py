@@ -1,4 +1,4 @@
-﻿# server.py
+# server.py
 import os
 import sys
 import warnings
@@ -23,6 +23,9 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Form, BackgroundTasks, Depends
 from auth import get_current_user
 from routes.auth_routes import auth_router
@@ -267,10 +270,11 @@ async def trigger_bolna_call(payload: dict = Body(...), current_user: dict = Dep
     
     # Replace variables
     prompt_text = base_prompt.replace("{{customer_name}}", customer_name)
-    company_name_val = current_user.get("company_id")
-    if not company_name_val:
-        company_name_val = "Company"
+    company = await db.companies.find_one({"company_id": current_user["company_id"]})
+    company_name_val = company.get("name") if company else "Company"
     prompt_text = prompt_text.replace("{{company_name}}", company_name_val)
+    
+    bolna_payload["user_data"]["company_name"] = company_name_val
     # Add language instructions if not English
     if campaign_language.lower() != "english":
         prompt_text += f"\n\nIMPORTANT: You MUST speak entirely in the {campaign_language} language. Please reply naturally in {campaign_language}."
@@ -287,7 +291,12 @@ async def trigger_bolna_call(payload: dict = Body(...), current_user: dict = Dep
         bolna_payload["user_data"]["welcome_message"] = welcome_text
 
     try:
+        import json
+        with open("payload_dump.json", "w") as f:
+            json.dump(bolna_payload, f, indent=2)
+            
         print(f"Triggering Bolna call to {phone_number} with webhook_url: {bolna_payload['webhook_url']}")
+        print(f"DUMPING BOLNA PAYLOAD: {json.dumps(bolna_payload, indent=2)}")
         response = requests.post(url, json=bolna_payload, headers=headers, timeout=30)
         
         if not response.ok:
@@ -341,6 +350,8 @@ async def process_bulk_calls(contacts: list, campaign_language: str = "English",
             
         lead_id = contact.get("lead_id") or f"bulk_{int(time.time() * 1000)}_{idx}"
         
+        campaign_id_val = contact.get("campaign_id")
+        
         await db.calls.insert_one({
             "call_id": lead_id,
             "customer_id": phone_str,
@@ -356,7 +367,8 @@ async def process_bulk_calls(contacts: list, campaign_language: str = "English",
             "ai_voice": ai_voice,
             "voice_gender": voice_gender,
             "regional_accent": regional_accent,
-            "company_id": company_id
+            "company_id": company_id,
+            "campaign_id": campaign_id_val
         })
         
         bolna_payload = {
@@ -380,7 +392,11 @@ async def process_bulk_calls(contacts: list, campaign_language: str = "English",
         
         # Replace variables
         prompt_text = base_prompt.replace("{{customer_name}}", customer_name)
-        prompt_text = prompt_text.replace("{{company_name}}", company_id or "Company")
+        company = await db.companies.find_one({"company_id": company_id})
+        company_name_val = company.get("name") if company else "Company"
+        prompt_text = prompt_text.replace("{{company_name}}", company_name_val)
+        
+        bolna_payload["user_data"]["company_name"] = company_name_val
         
         # Add language instructions if not English
         if campaign_language.lower() != "english":
@@ -391,7 +407,7 @@ async def process_bulk_calls(contacts: list, campaign_language: str = "English",
         welcome_message = prompt_doc.get("welcome_message") if prompt_doc else None
         if welcome_message:
             welcome_text = welcome_message.replace("{{customer_name}}", customer_name)
-            welcome_text = welcome_text.replace("{{company_name}}", company_id or "Company")
+            welcome_text = welcome_text.replace("{{company_name}}", company_name_val)
             bolna_payload["agent_config"] = {
                 "agent_welcome_message": welcome_text
             }
@@ -400,7 +416,9 @@ async def process_bulk_calls(contacts: list, campaign_language: str = "English",
         print(f"DEBUG: Parsed name for {phone_str} is -> '{customer_name}'")
         
         try:
+            import json
             print(f"Triggering Bulk Bolna call to {phone_str} with webhook_url: {bolna_payload['webhook_url']}")
+            print(f"DUMPING BOLNA BULK PAYLOAD: {json.dumps(bolna_payload, indent=2)}")
             # Run blocking request in threadpool
             response = await run_in_threadpool(requests.post, url, json=bolna_payload, headers=headers, timeout=30)
             
@@ -922,7 +940,7 @@ async def send_followup_email(call_id: str):
 
 if __name__ == "__main__":
     import uvicorn
-    # Using 'server:app' as a string is required for multi-worker setup
-    uvicorn.run("server:app", host="0.0.0.0", port=8002, workers=4)
+    # Using 'server:app' as a string is required for multi-worker setup or reload
+    uvicorn.run("server:app", host="0.0.0.0", port=8002, reload=True)
 
 
