@@ -114,8 +114,7 @@ async def list_campaigns(current_user: dict = Depends(get_current_user)):
             
     if bulk_updates:
         # Execute the background sync in a single DB call
-        import asyncio
-        asyncio.create_task(db.campaigns.bulk_write(bulk_updates))
+        await db.campaigns.bulk_write(bulk_updates)
             
     return campaigns
 
