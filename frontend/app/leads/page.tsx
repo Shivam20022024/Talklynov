@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useRef, useState, Suspense } from 'react'
 import { Download, MoreHorizontal, Phone, Search, Upload, Loader2, Plus, X, User, MapPin, Home, Sparkles, MessageSquare, Clock, ArrowRight, Trash2 } from 'lucide-react'
@@ -206,13 +206,13 @@ function LeadsContent() {
           <p className="mt-2 text-sm text-muted-foreground">Manage and filter your AI contacted leads.</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={handleDeleteSelected} className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-100">
+          <button onClick={handleDeleteSelected} className="flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50">
             <Trash2 size={15} />Delete Selected
           </button>
-          <button onClick={() => setShowQuickCallModal(true)} className="flex items-center gap-2 rounded-lg border border-primary bg-primary/10 px-3.5 py-2.5 text-xs font-semibold text-primary hover:bg-primary/20">
+          <button onClick={() => setShowQuickCallModal(true)} className="flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50">
             <Phone size={15} />Quick Call
           </button>
-          <button onClick={() => setShowModal(true)} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-xs font-semibold hover:bg-muted">
+          <button onClick={() => setShowModal(true)} className="flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50">
             <Plus size={15} />Add Lead
           </button>
           <input type="file" accept=".csv,.xlsx" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
@@ -227,10 +227,10 @@ function LeadsContent() {
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div className="flex gap-2">
             <div className="relative">
-              <Search className="absolute left-3 top-2.5 text-muted-foreground" size={14} />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search leads" className="h-9 w-44 rounded-lg border border-border bg-background pl-9 pr-3 text-xs outline-none focus:ring-2 focus:ring-ring" />
+              <Search className="absolute left-3 top-2.5 text-primary" size={14} />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search leads" className="h-9 w-44 rounded-lg border border-primary ring-1 ring-primary/20 bg-background pl-9 pr-3 text-xs outline-none focus:ring-2 focus:ring-primary/50" />
             </div>
-            <select value={range} onChange={(e) => setRange(e.target.value)} className="rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground outline-none focus:ring-2 focus:ring-ring">
+            <select value={range} onChange={(e) => setRange(e.target.value)} className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-ring">
               <option>Today</option>
               <option>7 Days</option>
               <option>30 Days</option>
@@ -239,7 +239,7 @@ function LeadsContent() {
             <select
               value={filterStatus || 'All Statuses'}
               onChange={(e) => setFilterStatus(e.target.value === 'All Statuses' ? null : e.target.value)}
-              className="rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground outline-none focus:ring-2 focus:ring-ring"
+              className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="All Statuses">All Statuses</option>
               <option value="New">New</option>
@@ -264,7 +264,7 @@ function LeadsContent() {
           <div className="flex gap-2">
             <div className="flex items-center gap-1 rounded-lg bg-muted/60 p-1 mr-2 hidden sm:flex">
               {['Today', '7 Days', '30 Days', 'All Time'].map((item) => (
-                <button key={item} onClick={() => setRange(item)} className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-colors ${range === item ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}>
+                <button key={item} onClick={() => setRange(item)} className={`rounded-md px-3 py-1.5 text-sm font-bold transition-colors ${range === item ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}>
                   {item}
                 </button>
               ))}
@@ -276,7 +276,7 @@ function LeadsContent() {
         {/* Mobile filter view */}
         <div className="mt-3 flex items-center gap-1 rounded-lg bg-muted/60 p-1 sm:hidden overflow-x-auto">
           {['Today', '7 Days', '30 Days', 'All Time'].map((item) => (
-            <button key={item} onClick={() => setRange(item)} className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-colors ${range === item ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}>
+            <button key={item} onClick={() => setRange(item)} className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-bold transition-colors ${range === item ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}>
               {item}
             </button>
           ))}
@@ -285,7 +285,7 @@ function LeadsContent() {
         <div className="mt-5 overflow-x-auto">
           <table className="w-full min-w-[800px] text-left">
             <thead>
-              <tr className="border-b border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              <tr className="border-b border-border text-sm font-bold uppercase tracking-[0.14em] text-foreground">
                 <th className="pb-3 pl-4 font-semibold w-10">
                   <input 
                     type="checkbox" 

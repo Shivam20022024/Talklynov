@@ -27,8 +27,10 @@ export default function DashboardPage() {
   const [range, setRange] = useState('Last 30 days')
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<string[]>([])
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('')
   
   const [dashboardData, setDashboardData] = useState<any>(null)
+  const [campaignsList, setCampaignsList] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [greeting, setGreeting] = useState('Good morning')
 
@@ -42,8 +44,13 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const res = await fetchApi(`/api/v1/analytics/dashboard?range=${encodeURIComponent(range)}`)
-        setDashboardData(res.data)
+        setLoading(true)
+        const [dashRes, campRes] = await Promise.all([
+          fetchApi(`/api/v1/analytics/dashboard?range=${encodeURIComponent(range)}${selectedCampaignId ? `&campaign_id=${selectedCampaignId}` : ''}`),
+          fetchApi('/api/v1/campaigns')
+        ])
+        setDashboardData(dashRes.data)
+        setCampaignsList(campRes || [])
       } catch (e) {
         console.error('Failed to load dashboard data', e)
       } finally {
@@ -51,7 +58,7 @@ export default function DashboardPage() {
       }
     }
     loadDashboard()
-  }, [range])
+  }, [range, selectedCampaignId])
 
   const metrics = [
     ['Total leads', dashboardData?.total_leads || '0', '+0%', Users, 'blue'],
@@ -118,11 +125,18 @@ export default function DashboardPage() {
           <p className="mt-2 text-sm text-muted-foreground">Here&apos;s what&apos;s happening with your AI calling today.</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/campaigns" className="flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-xs font-semibold hover:bg-muted">
+          <select 
+            value={selectedCampaignId} 
+            onChange={(e) => setSelectedCampaignId(e.target.value)}
+            className="rounded-lg border border-primary ring-1 ring-primary/20 bg-background px-3.5 py-2.5 text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-primary/50"
+          >
+            <option value="">All Campaigns</option>
+            {campaignsList.map((c: any) => (
+              <option key={c.campaign_id} value={c.campaign_id}>{c.name}</option>
+            ))}
+          </select>
+          <Link href="/campaigns" className="flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90">
             <Plus size={15} />Create Campaign
-          </Link>
-          <Link href="/leads" className="flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90">
-            <Upload size={15} />Upload Leads
           </Link>
         </div>
       </section>
@@ -137,12 +151,11 @@ export default function DashboardPage() {
         <article className="rounded-xl border border-border bg-card p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="eyebrow">Performance</p>
-              <h2 className="mt-1 text-lg font-bold">Calling performance</h2>
+              <h2 className="text-lg font-bold">Calling performance</h2>
             </div>
             <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
               {['Today', '7 Days', '30 Days', '90 Days'].map((item) => (
-                <button key={item} onClick={() => setRange(item)} className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium ${range === item ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>
+                <button key={item} onClick={() => setRange(item)} className={`rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${range === item ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:bg-muted-foreground/10'}`}>
                   {item}
                 </button>
               ))}

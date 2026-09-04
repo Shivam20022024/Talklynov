@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 const navGroups = [
-  { label: 'MAIN', items: [['Dashboard', Home, '/dashboard'], ['Leads', Users, '/leads'], ['Campaigns', Target, '/campaigns'], ['Calls', Phone, '/calls'], ['AI Prompt', Bot, '/prompt'], ['Voice Intelligence', Activity, '/voice-intelligence'], ['Analytics', BarChart3, '/analytics']] },
+  { label: 'MAIN', items: [['Dashboard', Home, '/dashboard'], ['Leads', Users, '/leads'], ['Campaigns', Target, '/campaigns'], ['Calls', Phone, '/calls'], ['AI Prompt', Bot, '/prompt'], ['Voice Intelligence', Activity, '/voice-intelligence']] },
   { label: 'MANAGEMENT', items: [['Team', Users, '/team'], ['Billing & Usage', TrendingUp, '/billing'], ['Settings', Settings2, '/settings']] },
 ] as const;
 

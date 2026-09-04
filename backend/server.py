@@ -92,9 +92,9 @@ async def health_check():
     return {"status": "ok", "service": "TalklyAI Backend"}
 
 @app.get("/api/v1/analytics/dashboard")
-async def get_analytics_dashboard(range: str = "30 Days", current_user: dict = Depends(get_current_user)):
+async def get_analytics_dashboard(range: str = "30 Days", campaign_id: str = None, current_user: dict = Depends(get_current_user)):
     db = mongodb.get_db()
-    metrics = await intelligence_service.get_dashboard_metrics(db, current_user["company_id"], range)
+    metrics = await intelligence_service.get_dashboard_metrics(db, current_user["company_id"], range, campaign_id)
     return {"status": "success", "data": metrics}
 
 @app.get("/api/v1/analytics/overall")
@@ -239,7 +239,8 @@ async def trigger_bolna_call(payload: dict = Body(...), current_user: dict = Dep
         "ai_voice": ai_voice,
         "voice_gender": voice_gender,
         "regional_accent": regional_accent,
-        "company_id": current_user["company_id"]
+        "company_id": current_user["company_id"],
+        "campaign_id": lead.get("campaign_id") if 'lead' in locals() and lead else None
     })
 
     url = "https://api.bolna.ai/call"
@@ -556,7 +557,8 @@ async def trigger_campaign_calls(
             contacts.append({
                 "lead_id": lead.get("lead_id"),
                 "phone": lead.get("phone"),
-                "name": lead.get("name", "Lead")
+                "name": lead.get("name", "Lead"),
+                "campaign_id": lead.get("campaign_id")
             })
             
     if not contacts:
@@ -873,7 +875,8 @@ async def process_audio_api(
             "analysis": result.get("analysis", {}),
             "created_at": now,
             "status": "Analyzed",
-            "company_id": current_user["company_id"]
+            "company_id": current_user["company_id"],
+            "source": "voice_intelligence"
         }
         db = mongodb.get_db()
         await db.calls.insert_one(doc)
@@ -884,6 +887,23 @@ async def process_audio_api(
         print(f"ERROR PROCESSING AUDIO: {str(e)}")
         if temp_path and os.path.exists(temp_path): os.remove(temp_path)
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/v1/voice-intelligence/history")
+async def get_voice_intelligence_history(limit: int = 20, skip: int = 0, current_user: dict = Depends(get_current_user)):
+    db = mongodb.get_db()
+    cursor = db.calls.find({
+        "company_id": current_user["company_id"], 
+        "$or": [
+            {"source": "voice_intelligence"},
+            {"status": "Analyzed", "duration_seconds": {"$exists": False}, "customer_name": "Phone Lead"}
+        ]
+    }).sort("created_at", -1).skip(skip).limit(limit)
+    
+    history = []
+    async for d in cursor:
+        d["_id"] = None
+        history.append(d)
+    return {"status": "success", "data": history}
 
 @app.get("/download/{report_type}")
 async def download_report(report_type: str):

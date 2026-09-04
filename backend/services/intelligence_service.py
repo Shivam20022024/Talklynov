@@ -7,7 +7,7 @@ class IntelligenceService:
     Service for calculating AI Business Intelligence metrics across calls.
     """
     
-    async def get_dashboard_metrics(self, db, company_id: str, range_str: str = "30 Days") -> Dict[str, Any]:
+    async def get_dashboard_metrics(self, db, company_id: str, range_str: str = "30 Days", campaign_id: str = None) -> Dict[str, Any]:
         """
         Calculates top-level metrics for the BI Dashboard.
         """
@@ -23,18 +23,24 @@ class IntelligenceService:
             
         start_date = (today - timedelta(days=days)).replace(hour=0, minute=0, second=0, microsecond=0)
         
+        base_query_leads = {"company_id": company_id, "created_at": {"$gte": start_date}}
+        base_query_calls = {"company_id": company_id, "created_at": {"$gte": start_date}}
+        
+        if campaign_id:
+            base_query_leads["campaign_id"] = campaign_id
+            base_query_calls["campaign_id"] = campaign_id
+        
         # 1-4. Concurrently fetch all top-level metrics
-        total_leads_task = db.leads.count_documents({"company_id": company_id, "created_at": {"$gte": start_date}})
-        calls_made_task = db.calls.count_documents({"company_id": company_id, "created_at": {"$gte": start_date}})
+        total_leads_task = db.leads.count_documents(base_query_leads)
+        calls_made_task = db.calls.count_documents(base_query_calls)
         connected_calls_task = db.calls.count_documents({
-            "company_id": company_id, 
-            "status": {"$in": ["Completed", "completed", "Analyzed"]},
-            "created_at": {"$gte": start_date}
+            **base_query_calls,
+            "status": {"$in": ["Completed", "completed", "Analyzed"]}
         })
-        qualified_leads_task = db.leads.count_documents({"company_id": company_id, "status": "Qualified", "created_at": {"$gte": start_date}})
-        interested_leads_task = db.leads.count_documents({"company_id": company_id, "status": "Interested", "created_at": {"$gte": start_date}})
-        converted_leads_task = db.leads.count_documents({"company_id": company_id, "status": "Converted", "created_at": {"$gte": start_date}})
-        contacted_leads_task = db.leads.count_documents({"company_id": company_id, "status": {"$ne": "New"}, "created_at": {"$gte": start_date}})
+        qualified_leads_task = db.leads.count_documents({**base_query_leads, "status": "Qualified"})
+        interested_leads_task = db.leads.count_documents({**base_query_leads, "status": "Interested"})
+        converted_leads_task = db.leads.count_documents({**base_query_leads, "status": "Converted"})
+        contacted_leads_task = db.leads.count_documents({**base_query_leads, "status": {"$ne": "New"}})
         
         (
             total_leads, calls_made, connected_calls, 
@@ -62,8 +68,13 @@ class IntelligenceService:
                 d_start = (today - timedelta(hours=i*step_hours)).replace(minute=0, second=0, microsecond=0)
                 d_end = d_start + timedelta(hours=step_hours)
                 labels.append(d_start.strftime("%I %p"))
-                chart_tasks.append(db.calls.count_documents({"company_id": company_id, "created_at": {"$gte": d_start, "$lt": d_end}}))
-                chart_tasks.append(db.calls.count_documents({"company_id": company_id, "status": {"$in": ["Completed", "completed", "Analyzed"]}, "created_at": {"$gte": d_start, "$lt": d_end}}))
+                
+                chart_base = {"company_id": company_id, "created_at": {"$gte": d_start, "$lt": d_end}}
+                if campaign_id:
+                    chart_base["campaign_id"] = campaign_id
+                    
+                chart_tasks.append(db.calls.count_documents(chart_base))
+                chart_tasks.append(db.calls.count_documents({**chart_base, "status": {"$in": ["Completed", "completed", "Analyzed"]}}))
         else:
             points = min(12, days)
             step_days = max(1, days // points)
@@ -71,8 +82,13 @@ class IntelligenceService:
                 d_start = (today - timedelta(days=i*step_days)).replace(hour=0, minute=0, second=0, microsecond=0)
                 d_end = d_start + timedelta(days=step_days)
                 labels.append(d_start.strftime("%b %d"))
-                chart_tasks.append(db.calls.count_documents({"company_id": company_id, "created_at": {"$gte": d_start, "$lt": d_end}}))
-                chart_tasks.append(db.calls.count_documents({"company_id": company_id, "status": {"$in": ["Completed", "completed", "Analyzed"]}, "created_at": {"$gte": d_start, "$lt": d_end}}))
+                
+                chart_base = {"company_id": company_id, "created_at": {"$gte": d_start, "$lt": d_end}}
+                if campaign_id:
+                    chart_base["campaign_id"] = campaign_id
+                    
+                chart_tasks.append(db.calls.count_documents(chart_base))
+                chart_tasks.append(db.calls.count_documents({**chart_base, "status": {"$in": ["Completed", "completed", "Analyzed"]}}))
                 
         if chart_tasks:
             results = await asyncio.gather(*chart_tasks)

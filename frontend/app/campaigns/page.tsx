@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState, useRef } from 'react'
 import { Check, Download, Plus, Search, Zap, Loader2, X, Upload } from 'lucide-react'
@@ -124,7 +124,7 @@ export default function CampaignsPage() {
           <p className="mt-2 text-sm text-muted-foreground">Manage your AI outbound calling campaigns.</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setShowModal(true)} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-xs font-semibold hover:bg-muted">
+          <button onClick={() => setShowModal(true)} className="flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90">
             <Plus size={15} />Create Campaign
           </button>
         </div>
@@ -138,71 +138,76 @@ export default function CampaignsPage() {
           </div>
           <div className="flex gap-2">
             <div className="relative">
-              <Search className="absolute left-3 top-2.5 text-muted-foreground" size={14} />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search campaigns" className="h-9 w-44 rounded-lg border border-border bg-background pl-9 pr-3 text-xs outline-none focus:ring-2 focus:ring-ring" />
+              <Search className="absolute left-3 top-2.5 text-primary" size={14} />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search campaigns" className="h-9 w-44 rounded-lg border border-primary ring-1 ring-primary/20 bg-background pl-9 pr-3 text-xs outline-none focus:ring-2 focus:ring-primary/50" />
             </div>
             <button onClick={handleDownload} className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><Download size={15} /></button>
           </div>
         </div>
         
         <div className="mt-5 overflow-x-auto">
-          <table className="w-full min-w-[780px] text-left">
+          <table className="w-full min-w-[900px] border-collapse text-left">
             <thead>
-              <tr className="border-b border-border text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                <th className="pb-3 pl-2 font-semibold">Campaign / property</th>
-                <th className="pb-3 font-semibold">Leads</th>
-                <th className="pb-3 font-semibold">Calls</th>
-                <th className="pb-3 font-semibold">Connected</th>
-                <th className="pb-3 font-semibold">Interested</th>
-                <th className="pb-3 font-semibold">Conversion</th>
-                <th className="pb-3 font-semibold">Status</th>
-                <th className="pb-3 pr-2 text-right font-semibold">Actions</th>
+              <tr className="border-b border-border h-12 text-sm font-bold uppercase tracking-wider text-foreground">
+                <th className="px-4 font-semibold w-[28%]">Campaign & Property</th>
+                <th className="px-2 text-center font-semibold w-[9%]">Leads</th>
+                <th className="px-2 text-center font-semibold w-[9%]">Calls</th>
+                <th className="px-2 text-center font-semibold w-[11%]">Connected</th>
+                <th className="px-2 text-center font-semibold w-[11%]">Interested</th>
+                <th className="px-2 text-center font-semibold w-[11%]">Conversion</th>
+                <th className="px-2 font-semibold w-[10%]">Status</th>
+                <th className="px-4 text-right font-semibold w-[11%]">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border/50">
               {loading ? (
-                <tr><td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">Loading campaigns...</td></tr>
+                <tr><td colSpan={8} className="py-12 text-center text-sm text-muted-foreground">Loading campaigns...</td></tr>
               ) : visibleCampaigns.length === 0 ? (
-                <tr><td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">No campaigns found. Create one above!</td></tr>
+                <tr><td colSpan={8} className="py-12 text-center text-sm text-muted-foreground">No campaigns found. Create one above!</td></tr>
               ) : (
                 visibleCampaigns.map((campaign) => (
-                  <tr key={campaign.campaign_id} className="border-b border-border/70 last:border-0">
-                    <td className="py-4 pl-2">
+                  <tr key={campaign.campaign_id} className="group h-16 hover:bg-muted/30 transition-colors">
+                    <td className="px-4">
                       <div className="flex items-center gap-3">
-                        <button onClick={() => toggleCampaign(campaign.campaign_id)} className={`flex h-4 w-4 items-center justify-center rounded border ${selected.includes(campaign.campaign_id) ? 'border-primary bg-primary text-primary-foreground' : 'border-border'}`}>
-                          {selected.includes(campaign.campaign_id) && <Check size={11} />}
+                        <button 
+                          onClick={() => toggleCampaign(campaign.campaign_id)} 
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors ${selected.includes(campaign.campaign_id) ? 'border-primary bg-primary text-primary-foreground' : 'border-input hover:border-primary/50 bg-background'}`}
+                        >
+                          {selected.includes(campaign.campaign_id) && <Check size={12} strokeWidth={3} />}
                         </button>
-                        <div>
-                          <p className="text-sm font-semibold">{campaign.name}</p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">{campaign.property}</p>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-foreground truncate max-w-[200px]" title={campaign.name}>{campaign.name}</span>
+                          <span className="text-xs font-medium text-muted-foreground truncate max-w-[200px]" title={campaign.property}>{campaign.property || 'No Property'}</span>
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 text-sm">{campaign.leads}</td>
-                    <td className="py-4 text-sm">{campaign.calls}</td>
-                    <td className="py-4 text-sm">{campaign.connected}</td>
-                    <td className="py-4 text-sm">{campaign.interested}</td>
-                    <td className="py-4 text-sm font-semibold text-primary">{campaign.conversion}</td>
-                    <td className="py-4">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{campaign.status}
+                    <td className="px-2 text-center text-sm font-medium">{campaign.leads}</td>
+                    <td className="px-2 text-center text-sm font-medium">{campaign.calls}</td>
+                    <td className="px-2 text-center text-sm font-medium">{campaign.connected}</td>
+                    <td className="px-2 text-center text-sm font-medium">{campaign.interested}</td>
+                    <td className="px-2 text-center text-sm font-bold text-primary">{campaign.conversion}</td>
+                    <td className="px-2">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold tracking-wide text-emerald-600 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        {campaign.status}
                       </span>
                     </td>
-                    <td className="py-4 pr-2 text-right">
+                    <td className="px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <a 
                           href={`/leads?campaign_id=${campaign.campaign_id}`}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20"
+                          className="inline-flex h-8 items-center justify-center whitespace-nowrap gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-sm hover:opacity-90 transition-opacity"
                         >
                           View Leads
                         </a>
                         <button 
                           onClick={() => handleUploadClick(campaign.campaign_id)}
                           disabled={uploadingCampaignId === campaign.campaign_id}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted disabled:opacity-50"
+                          className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+                          title="Upload Leads"
                         >
-                          {uploadingCampaignId === campaign.campaign_id ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
-                          Upload
+                          {uploadingCampaignId === campaign.campaign_id ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                          <span>Upload</span>
                         </button>
                       </div>
                     </td>
